@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+import datetime
+import sys
+
+
+STATE_DEV = '/sys/power/state'
+RTC_DEV = '/sys/class/rtc/rtc0/wakealarm'
+
+class RtcSet(Exception):
+    pass
+
+def powerstate(dest):
+    with open(STATE_DEV, 'w') as f:
+        f.write(dest)
+
+
+def s2ram():
+    powerstate('mem')
+
+
+def set_rtc(timestamp, force=False):
+
+    # Check current value of the RTC
+    with open(RTC_DEV) as f:
+        rtc_timestamp = f.read()
+
+    # RTC is already set
+    if rtc_timestamp:
+        if force:
+            with open(RTC_DEV, 'w') as f:
+                f.write('0')
+        else:
+            raise RtcSet('RTC already set')
+
+    with open(RTC_DEV, 'w') as f:
+        f.write(str(int(timestamp)))
+
+
+def wake_up_time(hh, mm):
+    '''
+    Finds the first time matching
+    that is into the future.
+
+    Returns timestamp, timedate
+    '''
+    now = datetime.datetime.now()
+    attempt = datetime.datetime(
+        now.year,
+        now.month,
+        now.day,
+        hh,
+        mm
+    )
+    if attempt < now:
+        attempt += datetime.timedelta(1)
+    return attempt.timestamp(), attempt
+
+
+def main():
+    try:
+        hh, mm = map(int, sys.argv[1].split(':'))
+    except:
+        print('Invalid arguments', file=sys.stderr)
+        print('%s HH:MM' % sys.argv[0], file=sys.stderr)
+        sys.exit(1)
+
+    timestamp, dt = wake_up_time(hh, mm)
+    print('Setting RTC for %s' % dt)
+
+    try:
+        set_rtc(timestamp)
+    except RtcSet:
+        print('RTC device is already set', file=sys.stderr)
+        sys.exit(2)
+    except Exception as e:
+        print(e.strerror, file=sys.stderr)
+        sys.exit(2)
+
+    try:
+        s2ram()
+    except Exception as e:
+        print(e.strerror, file=sys.stderr)
+        sys.exit(3)
+
+
+if __name__ == '__main__':
+    main()
