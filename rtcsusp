@@ -46,9 +46,18 @@ def set_rtc(dt, force=False):
             rtc_now = datetime.datetime.fromtimestamp(int(rtc_epoch))
 
     alarm_time = rtc_now + (dt - now)
+    timestamp = str(int(alarm_time.timestamp()))
     with open(RTC_DEV, 'w') as f:
-        f.write(str(int(alarm_time.timestamp())))
+        f.write(timestamp)
 
+    # Verify that it was set, by reading back the timestamp:
+    # if it's not set (which might happen because the one we tried setting was actually
+    # in the past), raise
+    with open(RTC_DEV, 'r') as f:
+        set_ts = f.read()
+
+    if set_ts.rstrip('\n') != timestamp:
+        raise RtcSet('failed to set RTC wakeup alarm')
 
 def wake_up_time(hh, mm):
     '''
