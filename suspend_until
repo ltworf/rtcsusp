@@ -30,7 +30,8 @@ def set_rtc(timestamp, force=False):
             with open(RTC_DEV, 'w') as f:
                 f.write('0')
         else:
-            raise RtcSet('RTC already set')
+            rtc_date = datetime.datetime.fromtimestamp(int(rtc_timestamp))
+            raise RtcSet('RTC already set to %s' % rtc_date)
 
     with open(RTC_DEV, 'w') as f:
         f.write(str(int(timestamp)))
@@ -69,8 +70,8 @@ def main():
 
     try:
         set_rtc(timestamp)
-    except RtcSet:
-        print('RTC device is already set', file=sys.stderr)
+    except RtcSet as e:
+        print(str(e), file=sys.stderr)
         sys.exit(2)
     except Exception as e:
         print(e.strerror, file=sys.stderr)
