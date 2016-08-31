@@ -5,6 +5,7 @@ import sys
 
 STATE_DEV = '/sys/power/state'
 RTC_DEV = '/sys/class/rtc/rtc0/wakealarm'
+EPOCH_DEV = '/sys/class/rtc/rtc0/since_epoch'
 
 class RtcSet(Exception):
     pass
@@ -18,7 +19,13 @@ def s2ram():
     powerstate('mem')
 
 
-def set_rtc(timestamp, force=False):
+def set_rtc(dt, force=False):
+    '''
+    Set the RTC alarm time. Since there can be clock skew between the RTC
+    and system clock, and our timestamp is in system clock, we set the
+    RTC alarm time to the current RTC time plus the delta between timestamp
+    and the current system time
+    '''
 
     # Check current value of the RTC
     with open(RTC_DEV) as f:
@@ -33,8 +40,14 @@ def set_rtc(timestamp, force=False):
             rtc_date = datetime.datetime.fromtimestamp(int(rtc_timestamp))
             raise RtcSet('RTC already set to %s' % rtc_date)
 
+    now = datetime.datetime.now()
+    with open(EPOCH_DEV, 'r') as f:
+            rtc_epoch = f.read()
+            rtc_now = datetime.datetime.fromtimestamp(int(rtc_epoch))
+
+    alarm_time = rtc_now + (dt - now)
     with open(RTC_DEV, 'w') as f:
-        f.write(str(int(timestamp)))
+        f.write(str(int(alarm_time.timestamp())))
 
 
 def wake_up_time(hh, mm):
@@ -69,7 +82,7 @@ def main():
     print('Setting RTC for %s' % dt)
 
     try:
-        set_rtc(timestamp)
+        set_rtc(dt)
     except RtcSet as e:
         print(str(e), file=sys.stderr)
         sys.exit(2)
