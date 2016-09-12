@@ -80,8 +80,15 @@ def wake_up_time(hh, mm):
 
 
 def main():
+    time_arg = 1
+    force = False
+
+    if sys.argv[1] == '-f':
+        force = True
+        time_arg = 2
+
     try:
-        hh, mm = map(int, sys.argv[1].split(':'))
+        hh, mm = map(int, sys.argv[time_arg].split(':'))
     except:
         print('Invalid arguments', file=sys.stderr)
         print('%s HH:MM' % sys.argv[0], file=sys.stderr)
@@ -91,7 +98,7 @@ def main():
     print('Setting RTC for %s' % dt)
 
     try:
-        set_rtc(dt)
+        set_rtc(dt, force)
     except RtcSet as e:
         print(str(e), file=sys.stderr)
         sys.exit(2)
